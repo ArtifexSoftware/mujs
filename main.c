@@ -300,13 +300,17 @@ main(int argc, char **argv)
 	int status = 0;
 	int strict = 0;
 	int interactive = 0;
+	int runlimit = 0;
+	int memlimit = 0;
 	int i, c;
 
-	while ((c = xgetopt(argc, argv, "is")) != -1) {
+	while ((c = xgetopt(argc, argv, "isR:M:")) != -1) {
 		switch (c) {
 		default: usage(); break;
 		case 'i': interactive = 1; break;
 		case 's': strict = 1; break;
+		case 'R': runlimit = atoi(xoptarg); break;
+		case 'M': memlimit = atoi(xoptarg); break;
 		}
 	}
 
@@ -360,6 +364,7 @@ main(int argc, char **argv)
 		}
 		js_setglobal(J, "scriptArgs");
 
+		js_setlimit(J, runlimit, memlimit);
 		if (js_dofile(J, argv[c]))
 			status = 1;
 	}
@@ -372,6 +377,7 @@ main(int argc, char **argv)
 			rl_bind_key('\t', rl_insert);
 			input = readline(PS1);
 			while (input) {
+				js_setlimit(J, runlimit, memlimit);
 				eval_print(J, input);
 				if (*input)
 					add_history(input);
@@ -381,6 +387,7 @@ main(int argc, char **argv)
 			putchar('\n');
 		} else {
 			input = read_stdin();
+			js_setlimit(J, runlimit, memlimit);
 			if (!input || !js_dostring(J, input))
 				status = 1;
 			free(input);

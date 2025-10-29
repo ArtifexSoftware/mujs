@@ -56,6 +56,7 @@ void js_setreport(js_State *J, js_Report report);
 js_Panic js_atpanic(js_State *J, js_Panic panic);
 void js_freestate(js_State *J);
 void js_gc(js_State *J, int report);
+void js_setlimit(js_State *J, int runlimit, int memlimit);
 
 int js_dostring(js_State *J, const char *source);
 int js_dofile(js_State *J, const char *filename);

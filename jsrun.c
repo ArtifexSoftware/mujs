@@ -35,9 +35,29 @@ static void js_outofmemory(js_State *J)
 	js_throw(J);
 }
 
+static void js_runlimit(js_State *J)
+{
+	STACK[TOP].t.type = JS_TLITSTR;
+	STACK[TOP].u.litstr = "script ran too long";
+	++TOP;
+	js_throw(J);
+}
+
+void js_setlimit(js_State *J, int runlimit, int memlimit)
+{
+	J->runlimit = runlimit;
+	J->memlimit = memlimit;
+}
+
 void *js_malloc(js_State *J, int size)
 {
-	void *ptr = J->alloc(J->actx, NULL, size);
+	void *ptr;
+	if (J->memlimit > 0) {
+		if (size >= J->memlimit)
+			js_outofmemory(J);
+		J->memlimit -= size;
+	}
+	ptr = J->alloc(J->actx, NULL, size);
 	if (!ptr)
 		js_outofmemory(J);
 	return ptr;
@@ -45,6 +65,12 @@ void *js_malloc(js_State *J, int size)
 
 void *js_realloc(js_State *J, void *ptr, int size)
 {
+	if (J->memlimit > 0) {
+		// TODO: track released memory
+		if (size >= J->memlimit)
+			js_outofmemory(J);
+		J->memlimit -= size;
+	}
 	ptr = J->alloc(J->actx, ptr, size);
 	if (!ptr)
 		js_outofmemory(J);
@@ -61,6 +87,7 @@ char *js_strdup(js_State *J, const char *s)
 
 void js_free(js_State *J, void *ptr)
 {
+	// TODO: track released memory (J->memlimit)
 	J->alloc(J->actx, ptr, 0);
 }
 
@@ -1571,6 +1598,12 @@ static void jsR_run(js_State *J, js_Function *F)
 	pc += sizeof(str) / sizeof(*pc)
 
 	while (1) {
+		if (J->runlimit > 0) {
+			if (J->runlimit == 1)
+				js_runlimit(J);
+			--J->runlimit;
+		}
+
 		if (J->gccounter > J->gcthresh)
 			js_gc(J, 0);
 

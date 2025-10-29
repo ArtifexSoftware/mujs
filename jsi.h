@@ -270,6 +270,9 @@ struct js_State
 
 	js_Object *gcroot; /* gc scan list */
 
+	int runlimit;
+	int memlimit;
+
 	/* environments on the call stack but currently not in scope */
 	int envtop;
 	js_Environment *envstack[JS_ENVLIMIT];
