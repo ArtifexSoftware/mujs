@@ -102,7 +102,7 @@ static int jsY_findkeyword(js_State *J, const char *s)
 		J->text = keywords[i];
 		return TK_BREAK + i; /* first keyword + i */
 	}
-	J->text = js_intern(J, s);
+	J->text = s;
 	return TK_IDENTIFIER;
 }
 
@@ -449,7 +449,7 @@ static int lexstring(js_State *J)
 
 	s = textend(J);
 
-	J->text = js_intern(J, s);
+	J->text = s;
 	return TK_STRING;
 }
 
@@ -523,7 +523,7 @@ static int lexregexp(js_State *J)
 	if (g > 1 || i > 1 || m > 1)
 		jsY_error(J, "duplicated flag in regular expression");
 
-	J->text = js_intern(J, s);
+	J->text = s;
 	J->number = 0;
 	if (g) J->number += JS_REGEXP_G;
 	if (i) J->number += JS_REGEXP_I;
@@ -828,7 +828,7 @@ static int lexjsonstring(js_State *J)
 
 	s = textend(J);
 
-	J->text = js_intern(J, s);
+	J->text = s;
 	return TK_STRING;
 }
 
