@@ -114,6 +114,7 @@ void jsB_initerror(js_State *J)
 	{
 		jsB_props(J, "name", "Error");
 		jsB_propf(J, "Error.prototype.toString", Ep_toString, 0);
+		jsB_props(J, "message", "");
 
 		js_newcfunction(J, Ep_get_stack, "stack", 0);
 		js_pushnull(J);
