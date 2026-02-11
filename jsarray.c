@@ -369,8 +369,9 @@ static int Ap_sort_leaf(js_State *J, int i, int end)
 static void Ap_sort_sift(js_State *J, int i, int end)
 {
 	int j = Ap_sort_leaf(J, i, end);
-	while (Ap_sort_cmp(J, i, j) > 0)
+	while (j > i && Ap_sort_cmp(J, i, j) > 0) {
 		j = (j - 1) >> 1; /* parent */
+	}
 	while (j > i) {
 		Ap_sort_swap(J, i, j);
 		j = (j - 1) >> 1; /* parent */
