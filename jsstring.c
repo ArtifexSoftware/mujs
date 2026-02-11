@@ -547,6 +547,11 @@ static void Sp_replace_regexp(js_State *J)
 
 	re->last = 0;
 
+	if (js_try(J)) {
+		js_free(J, sb);
+		js_throw(J);
+	}
+
 loop:
 	s = m.sub[0].sp;
 	n = m.sub[0].ep - m.sub[0].sp;
@@ -622,10 +627,6 @@ end:
 	js_puts(J, &sb, s + n);
 	js_putc(J, &sb, 0);
 
-	if (js_try(J)) {
-		js_free(J, sb);
-		js_throw(J);
-	}
 	js_pushstring(J, sb ? sb->s : "");
 	js_endtry(J);
 	js_free(J, sb);
@@ -646,6 +647,11 @@ static void Sp_replace_string(js_State *J)
 		return;
 	}
 	n = strlen(needle);
+
+	if (js_try(J)) {
+		js_free(J, sb);
+		js_throw(J);
+	}
 
 	if (js_iscallable(J, 2)) {
 		js_copy(J, 2);
@@ -683,10 +689,6 @@ static void Sp_replace_string(js_State *J)
 		js_putc(J, &sb, 0);
 	}
 
-	if (js_try(J)) {
-		js_free(J, sb);
-		js_throw(J);
-	}
 	js_pushstring(J, sb ? sb->s : "");
 	js_endtry(J);
 	js_free(J, sb);
