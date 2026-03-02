@@ -240,7 +240,7 @@ static void Ap_slice(js_State *J)
 static int Ap_sort_cmp(js_State *J, int idx_a, int idx_b)
 {
 	js_Object *obj = js_tovalue(J, 0)->u.object;
-	if (obj->u.a.simple) {
+	if (obj->u.a.simple && idx_b < obj->u.a.flat_length) {
 		js_Value *val_a = &obj->u.a.array[idx_a];
 		js_Value *val_b = &obj->u.a.array[idx_b];
 		int und_a = val_a->t.type == JS_TUNDEFINED;
@@ -326,7 +326,7 @@ static int Ap_sort_cmp(js_State *J, int idx_a, int idx_b)
 static void Ap_sort_swap(js_State *J, int idx_a, int idx_b)
 {
 	js_Object *obj = js_tovalue(J, 0)->u.object;
-	if (obj->u.a.simple) {
+	if (obj->u.a.simple && idx_b < obj->u.a.flat_length) {
 		js_Value tmp = obj->u.a.array[idx_a];
 		obj->u.a.array[idx_a] = obj->u.a.array[idx_b];
 		obj->u.a.array[idx_b] = tmp;
@@ -354,7 +354,7 @@ static int Ap_sort_leaf(js_State *J, int i, int end)
 	int lc = (j << 1) + 1; /* left child */
 	int rc = (j << 1) + 2; /* right child */
 	while (rc < end) {
-		if (Ap_sort_cmp(J, rc, lc) > 0)
+		if (Ap_sort_cmp(J, lc, rc) <= 0)
 			j = rc;
 		else
 			j = lc;
