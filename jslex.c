@@ -211,7 +211,7 @@ static void textpush(js_State *J, Rune c)
 		n = runelen(c);
 	if (J->lexbuf.len + n > J->lexbuf.cap) {
 		newcap = J->lexbuf.cap * 2;
-		J->lexbuf.text = js_realloc(J, J->lexbuf.text, J->lexbuf.cap);
+		J->lexbuf.text = js_realloc(J, J->lexbuf.text, newcap);
 		J->lexbuf.cap = newcap;
 	}
 	if (c == EOF)
