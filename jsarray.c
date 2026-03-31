@@ -63,6 +63,38 @@ static void Ap_concat(js_State *J)
 	}
 }
 
+/* ugly cycle detection for Array.prototype.join */
+static void Ap_join(js_State *J);
+static void Ap_toString(js_State *J);
+static int Ap_join_cycle(js_State *J)
+{
+	js_Object *needle = js_toobject(J, 0);
+	int top = J->tracetop - 1;
+	while (top > 0) {
+		int stk = J->trace[top].stack;
+		js_Value *fun = &J->stack[stk-1];
+		if (fun->t.type != JS_TOBJECT) return 0;
+		if (fun->u.object->type != JS_CCFUNCTION) return 0;
+		if (fun->u.object->u.c.function == Ap_join)
+		{
+			js_Value *obj = &J->stack[stk];
+			if (obj->t.type != JS_TOBJECT) return 0;
+			if (obj->u.object == needle)
+				return 1;
+		}
+		else if (fun->u.object->u.c.function == Ap_toString)
+		{
+			/* join calls toString which calls join which calls toString, etc */
+		}
+		else
+		{
+			return 0;
+		}
+		--top;
+	}
+	return 0;
+}
+
 static void Ap_join(js_State *J)
 {
 	char * volatile out = NULL;
@@ -70,6 +102,11 @@ static void Ap_join(js_State *J)
 	const char *sep;
 	int seplen;
 	int k, n, len, rlen;
+
+	if (Ap_join_cycle(J)) {
+		js_pushliteral(J, "");
+		return;
+	}
 
 	len = js_getlength(J, 0);
 
