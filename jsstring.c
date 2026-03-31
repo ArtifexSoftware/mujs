@@ -467,6 +467,7 @@ static void Sp_match(js_State *J)
 	int len;
 	const char *a, *b, *c, *e;
 	Resub m;
+	Rune rune;
 
 	text = checkstring(J, 0);
 
@@ -502,7 +503,7 @@ static void Sp_match(js_State *J)
 
 		a = c;
 		if (c - b == 0)
-			++a;
+			a += chartorune(&rune, a);
 	}
 
 	if (len == 0) {
@@ -714,6 +715,7 @@ static void Sp_split_regexp(js_State *J)
 	int limit, len, k;
 	const char *p, *a, *b, *c, *e;
 	Resub m;
+	Rune rune;
 
 	text = checkstring(J, 0);
 	re = js_toregexp(J, 1);
@@ -746,7 +748,7 @@ static void Sp_split_regexp(js_State *J)
 
 		/* empty string at end of last match */
 		if (b == c && b == p) {
-			++a;
+			a += chartorune(&rune, a);
 			continue;
 		}
 
