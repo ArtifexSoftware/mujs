@@ -538,12 +538,12 @@ static void Sp_search(js_State *J)
 static void Sp_replace_regexp(js_State *J)
 {
 	js_Regexp *re;
-	const char *source, *s, *r;
+	const char *source, *source0, *s, *r;
 	js_Buffer *sb = NULL;
 	int n, x;
 	Resub m;
 
-	source = checkstring(J, 0);
+	source = source0 = checkstring(J, 0);
 	re = js_toregexp(J, 1);
 
 	if (js_doregexec(J, re->prog, source, &m, 0)) {
@@ -583,7 +583,7 @@ loop:
 				case 0: --r; /* end of string; back up */
 				/* fallthrough */
 				case '$': js_putc(J, &sb, '$'); break;
-				case '`': js_putm(J, &sb, source, s); break;
+				case '`': js_putm(J, &sb, source0, s); break;
 				case '\'': js_puts(J, &sb, s + n); break;
 				case '&':
 					js_putm(J, &sb, s, s + n);
