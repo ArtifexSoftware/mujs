@@ -76,13 +76,18 @@ int js_utfptrtoidx(const char *s, const char *p)
 	int i = 0;
 	while (s < p) {
 		if (*(unsigned char *)s < Runeself)
+		{
 			++s;
+			++i;
+		}
 		else
+		{
 			s += chartorune(&rune, s);
-		if (rune >= 0x10000)
-			i += 2;
-		else
-			i += 1;
+			if (rune >= 0x10000)
+				i += 2;
+			else
+				i += 1;
+		}
 	}
 	return i;
 }
