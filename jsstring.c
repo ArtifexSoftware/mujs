@@ -4,7 +4,10 @@
 
 static int js_doregexec(js_State *J, Reprog *prog, const char *string, Resub *sub, int eflags)
 {
-	int result = js_regexec(prog, string, sub, eflags);
+	int result;
+	if (J->runlimit)
+		eflags |= REG_RUNAWAY;
+	result = js_regexec(prog, string, sub, eflags);
 	if (result < 0)
 		js_error(J, "regexec failed");
 	return result;

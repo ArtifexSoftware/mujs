@@ -27,6 +27,11 @@
 #define REG_MAXCLASS 128
 #endif
 
+/* Max number of instructions to run if REG_RUNAWAY is set. */
+#ifndef REG_MAXRUN
+#define REG_MAXRUN (1<<20)
+#endif
+
 typedef struct Reclass Reclass;
 typedef struct Renode Renode;
 typedef struct Reinst Reinst;
@@ -1064,7 +1069,7 @@ static int strncmpcanon(const char *a, const char *b, int n)
 	return 0;
 }
 
-static int match(Reinst *pc, const char *sp, const char *bol, int flags, Resub *out, int depth)
+static int match(Reinst *pc, const char *sp, const char *bol, int flags, Resub *out, int depth, int *runaway)
 {
 	Resub scratch;
 	int result;
@@ -1076,6 +1081,9 @@ static int match(Reinst *pc, const char *sp, const char *bol, int flags, Resub *
 		return -1;
 
 	for (;;) {
+		if (flags & REG_RUNAWAY)
+			if (++(*runaway) >= REG_MAXRUN)
+				return -1;
 		switch (pc->opcode) {
 		case I_END:
 			return 0;
@@ -1084,7 +1092,7 @@ static int match(Reinst *pc, const char *sp, const char *bol, int flags, Resub *
 			break;
 		case I_SPLIT:
 			scratch = *out;
-			result = match(pc->x, sp, bol, flags, &scratch, depth+1);
+			result = match(pc->x, sp, bol, flags, &scratch, depth+1, runaway);
 			if (result == -1)
 				return -1;
 			if (result == 0) {
@@ -1095,7 +1103,7 @@ static int match(Reinst *pc, const char *sp, const char *bol, int flags, Resub *
 			break;
 
 		case I_PLA:
-			result = match(pc->x, sp, bol, flags, out, depth+1);
+			result = match(pc->x, sp, bol, flags, out, depth+1, runaway);
 			if (result == -1)
 				return -1;
 			if (result == 1)
@@ -1104,7 +1112,7 @@ static int match(Reinst *pc, const char *sp, const char *bol, int flags, Resub *
 			break;
 		case I_NLA:
 			scratch = *out;
-			result = match(pc->x, sp, bol, flags, &scratch, depth+1);
+			result = match(pc->x, sp, bol, flags, &scratch, depth+1, runaway);
 			if (result == -1)
 				return -1;
 			if (result == 0)
@@ -1227,6 +1235,7 @@ static int match(Reinst *pc, const char *sp, const char *bol, int flags, Resub *
 int regexec(Reprog *prog, const char *sp, Resub *sub, int eflags)
 {
 	Resub scratch;
+	int runaway = 0;
 	int i;
 
 	if (!sub)
@@ -1236,7 +1245,7 @@ int regexec(Reprog *prog, const char *sp, Resub *sub, int eflags)
 	for (i = 0; i < REG_MAXSUB; ++i)
 		sub->sub[i].sp = sub->sub[i].ep = NULL;
 
-	return match(prog->start, sp, sp, prog->flags | eflags, sub, 0);
+	return match(prog->start, sp, sp, prog->flags | eflags, sub, 0, &runaway);
 }
 
 #ifdef TEST
@@ -1258,7 +1267,7 @@ int main(int argc, char **argv)
 		if (argc > 2) {
 			s = argv[2];
 			printf("nsub = %d\n", p->nsub);
-			if (!regexec(p, s, &m, 0)) {
+			if (!regexec(p, s, &m, REG_RUNAWAY)) {
 				for (i = 0; i < m.nsub; ++i) {
 					int n = m.sub[i].ep - m.sub[i].sp;
 					if (n > 0)

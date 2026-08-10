@@ -26,6 +26,7 @@ enum {
 
 	/* regexec flags */
 	REG_NOTBOL = 4,
+	REG_RUNAWAY = 8, /* detect runaway backtracking */
 };
 
 /* If you redefine REG_MAXSUB, you must make sure both the calling

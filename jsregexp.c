@@ -72,6 +72,9 @@ void js_RegExp_prototype_exec(js_State *J, js_Regexp *re, const char *text)
 		}
 	}
 
+	if (J->runlimit)
+		opts |= REG_RUNAWAY;
+
 	result = js_regexec(re->prog, haystack, &m, opts);
 	if (result < 0)
 		js_error(J, "regexec failed");
@@ -120,6 +123,9 @@ static void Rp_test(js_State *J)
 				opts |= REG_NOTBOL;
 		}
 	}
+
+	if (J->runlimit)
+		opts |= REG_RUNAWAY;
 
 	result = js_regexec(re->prog, text, &m, opts);
 	if (result < 0)
