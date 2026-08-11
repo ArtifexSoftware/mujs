@@ -670,6 +670,7 @@ static void jsR_getindex(js_State *J, js_Object *obj, int k)
 static void jsR_setarrayindex(js_State *J, js_Object *obj, int k, js_Value *value)
 {
 	int newlen = k + 1;
+	assert(obj->type == JS_CARRAY);
 	assert(obj->u.a.simple);
 	assert(k >= 0);
 	if (newlen > JS_ARRAYLIMIT)

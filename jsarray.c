@@ -277,7 +277,7 @@ static void Ap_slice(js_State *J)
 static int Ap_sort_cmp(js_State *J, int idx_a, int idx_b)
 {
 	js_Object *obj = js_tovalue(J, 0)->u.object;
-	if (obj->u.a.simple && idx_b < obj->u.a.flat_length) {
+	if (obj->type == JS_CARRAY && obj->u.a.simple && idx_b < obj->u.a.flat_length) {
 		js_Value *val_a = &obj->u.a.array[idx_a];
 		js_Value *val_b = &obj->u.a.array[idx_b];
 		int und_a = val_a->t.type == JS_TUNDEFINED;
@@ -363,7 +363,7 @@ static int Ap_sort_cmp(js_State *J, int idx_a, int idx_b)
 static void Ap_sort_swap(js_State *J, int idx_a, int idx_b)
 {
 	js_Object *obj = js_tovalue(J, 0)->u.object;
-	if (obj->u.a.simple && idx_b < obj->u.a.flat_length) {
+	if (obj->type == JS_CARRAY && obj->u.a.simple && idx_b < obj->u.a.flat_length) {
 		js_Value tmp = obj->u.a.array[idx_a];
 		obj->u.a.array[idx_a] = obj->u.a.array[idx_b];
 		obj->u.a.array[idx_b] = tmp;
