@@ -50,6 +50,7 @@ struct Reprog {
 };
 
 struct cstate {
+	jmp_buf kaboom;
 	Reprog *prog;
 	Renode *pstart, *pend;
 
@@ -64,7 +65,6 @@ struct cstate {
 	int yymin, yymax;
 
 	const char *error;
-	jmp_buf kaboom;
 
 	Reclass cclass[REG_MAXCLASS];
 };
@@ -659,9 +659,9 @@ struct Reinst {
 	Reinst *y;
 };
 
-static int count(struct cstate *g, Renode *node, int depth)
+static size_t count(struct cstate *g, Renode *node, int depth)
 {
-	int min, max, n;
+	size_t min, max, n;
 	if (!node) return 0;
 	if (++depth > REG_MAXREC) die(g, "stack overflow");
 	switch (node->type) {
@@ -674,7 +674,7 @@ static int count(struct cstate *g, Renode *node, int depth)
 		if (min == max) n = count(g, node->x, depth) * min;
 		else if (max < REPINF) n = count(g, node->x, depth) * max + (max - min);
 		else n = count(g, node->x, depth) * (min + 1) + 2;
-		if (n < 0 || n > REG_MAXPROG) die(g, "program too large");
+		if (n > REG_MAXPROG) die(g, "program too large");
 		return n;
 	case P_PAR: return count(g, node->x, depth) + 2;
 	case P_PLA: return count(g, node->x, depth) + 2;
@@ -900,7 +900,8 @@ Reprog *regcompx(void *(*alloc)(void *ctx, void *p, int n), void *ctx,
 	struct cstate g;
 	Renode *node;
 	Reinst *split, *jump;
-	int i, n;
+	int i;
+	size_t n;
 
 	g.pstart = NULL;
 	g.prog = NULL;
@@ -952,7 +953,7 @@ Reprog *regcompx(void *(*alloc)(void *ctx, void *p, int n), void *ctx,
 #endif
 
 	n = 6 + count(&g, node, 0);
-	if (n < 0 || n > REG_MAXPROG)
+	if (n > REG_MAXPROG)
 		die(&g, "program too large");
 
 	g.prog->nsub = g.nsub;
