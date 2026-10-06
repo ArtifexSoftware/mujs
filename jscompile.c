@@ -802,9 +802,8 @@ static void labeljumps(JF, js_Ast *stm, int baddr, int caddr)
 		if (jump->type == STM_CONTINUE)
 			labelto(J, F, jump->inst, caddr);
 		js_free(J, jump);
-		jump = next;
+		stm->jumps = jump = next;
 	}
-	stm->jumps = NULL;
 }
 
 static int isloop(enum js_AstType T)
