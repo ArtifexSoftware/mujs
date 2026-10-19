@@ -363,8 +363,8 @@ struct js_Regexp
 {
 	void *prog;
 	char *source;
-	unsigned short flags;
-	unsigned short last;
+	int flags;
+	int last;
 };
 
 struct js_Object

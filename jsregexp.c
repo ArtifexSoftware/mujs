@@ -60,7 +60,7 @@ void js_RegExp_prototype_exec(js_State *J, js_Regexp *re, const char *text)
 	haystack = text;
 	opts = 0;
 	if (re->flags & JS_REGEXP_G) {
-		if (re->last > strlen(haystack)) {
+		if ((size_t)re->last > strlen(haystack)) {
 			re->last = 0;
 			js_pushnull(J);
 			return;
@@ -112,7 +112,7 @@ static void Rp_test(js_State *J)
 
 	opts = 0;
 	if (re->flags & JS_REGEXP_G) {
-		if (re->last > strlen(text)) {
+		if ((size_t)re->last > strlen(text)) {
 			re->last = 0;
 			js_pushboolean(J, 0);
 			return;
