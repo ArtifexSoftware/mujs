@@ -282,8 +282,10 @@ static char *read_stdin(void)
 static void usage(void)
 {
 	fprintf(stderr, "Usage: mujs [options] [script [scriptArgs*]]\n");
-	fprintf(stderr, "\t-i: Enter interactive prompt after running code.\n");
-	fprintf(stderr, "\t-s: Check strictness.\n");
+	fprintf(stderr, "\t-i\tEnter interactive prompt after running code.\n");
+	fprintf(stderr, "\t-s\tCheck strictness.\n");
+	fprintf(stderr, "\t-R -\tSet run limit (number of instructions).\n");
+	fprintf(stderr, "\t-M -\tSet memory limit (number of bytes).\n");
 	exit(1);
 }
 
