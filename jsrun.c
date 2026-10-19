@@ -545,10 +545,13 @@ static void js_pushrune(js_State *J, Rune rune)
 void jsR_unflattenarray(js_State *J, js_Object *obj) {
 	if (obj->type == JS_CARRAY && obj->u.a.simple) {
 		js_Property *ref;
-		int i;
+		volatile int i;
+		int k;
 		char name[32];
 		if (js_try(J)) {
-			obj->properties = NULL;
+			/* delete any array entries that were migrated to the property tree */
+			for (k = 0; k < i; ++k)
+				jsV_delproperty(J, obj, js_itoa(name, i));
 			js_throw(J);
 		}
 		for (i = 0; i < obj->u.a.flat_length; ++i) {
