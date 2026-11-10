@@ -104,6 +104,8 @@ static void Fp_apply(js_State *J)
 
 	if (js_isnull(J, 2) || js_isundefined(J, 2)) {
 		n = 0;
+	} else if (!js_isobject(J, 2)) {
+		js_typeerror(J, "argArray must be an object");
 	} else {
 		n = js_getlength(J, 2);
 		if (n < 0)
