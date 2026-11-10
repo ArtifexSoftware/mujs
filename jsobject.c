@@ -301,8 +301,6 @@ static void O_defineProperties_imp(js_State *J, js_Object *obj)
 	const char *name;
 	int i, n;
 
-	if (!js_isobject(J, 2)) js_typeerror(J, "not an object");
-
 	props = js_toobject(J, 2);
 	if (props->properties->level) {
 		js_newarray(J);
@@ -311,6 +309,7 @@ static void O_defineProperties_imp(js_State *J, js_Object *obj)
 			js_getindex(J, -1, i);
 			name = js_tostring(J, -1);
 			if (js_hasproperty(J, 2, name)) {
+				if (!js_isobject(J, -1)) js_typeerror(J, "property descriptor must be an object");
 				ToPropertyDescriptor(J, obj, name, js_toobject(J, -1));
 				js_pop(J, 1);
 			}
