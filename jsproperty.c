@@ -234,6 +234,13 @@ js_Property *jsV_setproperty(js_State *J, js_Object *obj, const char *name)
 	return result;
 }
 
+js_Property *jsV_defproperty(js_State *J, js_Object *obj, const char *name)
+{
+	js_Property *result;
+	obj->properties = insert(J, obj, obj->properties, name, &result);
+	return result;
+}
+
 void jsV_delproperty(js_State *J, js_Object *obj, const char *name)
 {
 	obj->properties = deleteproperty(J, obj, obj->properties, name);

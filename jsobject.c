@@ -221,55 +221,57 @@ static void O_getOwnPropertyNames(js_State *J)
 
 static void ToPropertyDescriptor(js_State *J, js_Object *obj, const char *name, js_Object *desc)
 {
-	int haswritable = 0;
 	int hasvalue = 0;
 	int enumerable = 0;
 	int configurable = 0;
 	int writable = 0;
+	int mask = 0;
 	int atts = 0;
 
 	js_pushobject(J, obj);
 	js_pushobject(J, desc);
 
 	if (js_hasproperty(J, -1, "writable")) {
-		haswritable = 1;
+		mask |= JS_READONLY;
 		writable = js_toboolean(J, -1);
 		js_pop(J, 1);
 	}
 	if (js_hasproperty(J, -1, "enumerable")) {
+		mask |= JS_DONTENUM;
 		enumerable = js_toboolean(J, -1);
 		js_pop(J, 1);
 	}
 	if (js_hasproperty(J, -1, "configurable")) {
+		mask |= JS_DONTCONF;
 		configurable = js_toboolean(J, -1);
 		js_pop(J, 1);
 	}
 	if (js_hasproperty(J, -1, "value")) {
 		hasvalue = 1;
-		js_defproperty(J, -3, name, 0);
+	} else {
+		js_pushundefined(J);
 	}
 
 	if (!writable) atts |= JS_READONLY;
 	if (!enumerable) atts |= JS_DONTENUM;
 	if (!configurable) atts |= JS_DONTCONF;
 
-	if (js_hasproperty(J, -1, "get")) {
-		if (haswritable || hasvalue)
-			js_typeerror(J, "value/writable and get/set attributes are exclusive");
-	} else {
-		js_pushundefined(J);
-	}
+	js_getproperty(J, -2, "get");
+	js_getproperty(J, -3, "set");
 
-	if (js_hasproperty(J, -2, "set")) {
-		if (haswritable || hasvalue)
-			js_typeerror(J, "value/writable and get/set attributes are exclusive");
-	} else {
-		js_pushundefined(J);
-	}
+	/* stack is now: object, descriptor, value, getter, setter */
+	jsR_defproperty(J,
+		js_toobject(J, -5),
+		name,
+		atts & mask,
+		mask,
+		hasvalue ? js_tovalue(J, -3) : NULL,
+		jsR_tofunction(J, -2),
+		jsR_tofunction(J, -1),
+		1
+	);
 
-	js_defaccessor(J, -4, name, atts);
-
-	js_pop(J, 2);
+	js_pop(J, 5);
 }
 
 static void O_defineProperty(js_State *J)

@@ -382,7 +382,7 @@ void *js_touserdata(js_State *J, int idx, const char *tag)
 	js_typeerror(J, "not a %s", tag);
 }
 
-static js_Object *jsR_tofunction(js_State *J, int idx)
+js_Object *jsR_tofunction(js_State *J, int idx)
 {
 	js_Value *v = stackidx(J, idx);
 	if (v->t.type == JS_TUNDEFINED || v->t.type == JS_TNULL)
@@ -814,34 +814,36 @@ static void jsR_setindex(js_State *J, js_Object *obj, int k, int transient)
 	}
 }
 
-static void jsR_defproperty(js_State *J, js_Object *obj, const char *name,
-	int atts, js_Value *value, js_Object *getter, js_Object *setter,
+void jsR_defproperty(js_State *J, js_Object *obj, const char *name,
+	int atts, int mask, js_Value *value, js_Object *getter, js_Object *setter,
 	int throw)
 {
 	js_Property *ref;
+	int is_desc_accessor, is_desc_data, is_desc_generic;
+	int is_curr_accessor, is_curr_data;
 	int k;
 
 	if (obj->type == JS_CARRAY) {
 		if (!strcmp(name, "length"))
-			goto readonly;
+			goto reject;
 		if (obj->u.a.simple)
 			jsR_unflattenarray(J, obj);
 	}
 
 	else if (obj->type == JS_CSTRING) {
 		if (!strcmp(name, "length"))
-			goto readonly;
+			goto reject;
 		if (js_isarrayindex(J, name, &k))
 			if (k >= 0 && k < obj->u.s.length)
-				goto readonly;
+				goto reject;
 	}
 
 	else if (obj->type == JS_CREGEXP) {
-		if (!strcmp(name, "source")) goto readonly;
-		if (!strcmp(name, "global")) goto readonly;
-		if (!strcmp(name, "ignoreCase")) goto readonly;
-		if (!strcmp(name, "multiline")) goto readonly;
-		if (!strcmp(name, "lastIndex")) goto readonly;
+		if (!strcmp(name, "source")) goto reject;
+		if (!strcmp(name, "global")) goto reject;
+		if (!strcmp(name, "ignoreCase")) goto reject;
+		if (!strcmp(name, "multiline")) goto reject;
+		if (!strcmp(name, "lastIndex")) goto reject;
 	}
 
 	else if (obj->type == JS_CUSERDATA) {
@@ -849,32 +851,102 @@ static void jsR_defproperty(js_State *J, js_Object *obj, const char *name,
 			return;
 	}
 
-	ref = jsV_setproperty(J, obj, name);
-	if (ref) {
-		if (value) {
-			if (!(ref->atts & JS_READONLY))
+	if ((getter || setter) && (value || (mask & JS_READONLY)))
+		js_typeerror(J, "property descriptors must not specify a value or be writable when a getter or setter has been specified");
+
+	/* [[DefineOwnProperty]] */
+	ref = jsV_getownproperty(J, obj, name);
+	if (!ref) {
+		/* Step 3 */
+		if (!obj->extensible)
+			goto reject;
+		if (getter || setter) {
+			/* Step 4.b */
+			ref = jsV_defproperty(J, obj, name);
+			ref->atts = (JS_DONTENUM | JS_DONTCONF);
+			ref->getter = getter;
+			ref->setter = setter;
+		} else {
+			/* Step 4.a */
+			ref = jsV_defproperty(J, obj, name);
+			ref->atts = (JS_READONLY | JS_DONTENUM | JS_DONTCONF);
+			if (value)
 				ref->value = *value;
-			else if (J->strict)
-				js_typeerror(J, "'%s' is read-only", name);
 		}
-		if (getter) {
-			if (!(ref->atts & JS_DONTCONF))
-				ref->getter = getter;
-			else if (J->strict)
-				js_typeerror(J, "'%s' is non-configurable", name);
+		ref->atts &= ~mask;
+		ref->atts |= atts;
+	} else {
+		is_desc_accessor = (getter != NULL) || (setter != NULL);
+		is_desc_data = (value != NULL) || (mask & JS_READONLY);
+		is_desc_generic = !is_desc_accessor && !is_desc_data;
+
+		is_curr_accessor = (ref->getter != NULL) || (ref->setter != NULL);
+		is_curr_data = !is_curr_accessor;
+
+		/* Step 7 */
+		if (ref->atts & JS_DONTCONF) {
+			/* Step 7a */
+			if ((mask & JS_DONTCONF) && !(atts & JS_DONTCONF))
+				goto reject;
+			/* Step 7b */
+			if ((mask & JS_DONTENUM) && (ref->atts & JS_DONTENUM) != (atts & JS_DONTENUM))
+				goto reject;
 		}
-		if (setter) {
-			if (!(ref->atts & JS_DONTCONF))
-				ref->setter = setter;
-			else if (J->strict)
-				js_typeerror(J, "'%s' is non-configurable", name);
+
+		if (is_desc_generic) {
+			/* Step 8 - no further validation required */
 		}
+		else if (is_curr_data != is_desc_data) {
+			/* Step 9.a */
+			if (ref->atts & JS_DONTCONF)
+				goto reject;
+			if (is_curr_data) {
+				/* Step 9.b.i: convert to accessor property */
+				ref->value.t.type = JS_TUNDEFINED;
+				ref->atts &= ~JS_READONLY;
+			} else {
+				/* Step 9.c.i: convert to data property */
+				ref->getter = NULL;
+				ref->setter = NULL;
+				ref->value.t.type = JS_TUNDEFINED;
+				ref->atts &= ~JS_READONLY;
+			}
+		}
+		else if (is_desc_data) {
+			/* Step 10 */
+			if (ref->atts & JS_DONTCONF) {
+				if ((ref->atts & JS_READONLY)) {
+					/* Step 10.a.i. */
+					if ((mask & JS_READONLY) && !(atts & JS_READONLY))
+						goto reject;
+					/* Step 10.a.ii. */
+					if (value && !jsV_samevalue(J, value, &ref->value))
+						goto reject;
+				}
+			}
+		}
+		else {
+			/* Step 11 */
+			if (ref->atts & JS_DONTCONF) {
+				if (setter && setter != ref->setter)
+					goto reject;
+				if (getter && getter != ref->getter)
+					goto reject;
+			}
+		}
+
+		/* Step 12 */
+		if (setter) ref->setter = setter;
+		if (getter) ref->getter = getter;
+		if (value) ref->value = *value;
+
+		ref->atts &= ~mask;
 		ref->atts |= atts;
 	}
 
 	return;
 
-readonly:
+reject:
 	if (J->strict || throw)
 		js_typeerror(J, "'%s' is read-only or non-configurable", name);
 }
@@ -996,7 +1068,7 @@ void js_setglobal(js_State *J, const char *name)
 
 void js_defglobal(js_State *J, const char *name, int atts)
 {
-	jsR_defproperty(J, J->G, name, atts, stackidx(J, -1), NULL, NULL, 0);
+	jsR_defproperty(J, J->G, name, atts, JS_READONLY|JS_DONTENUM|JS_DONTCONF, stackidx(J, -1), NULL, NULL, 0);
 	js_pop(J, 1);
 }
 
@@ -1018,7 +1090,7 @@ void js_setproperty(js_State *J, int idx, const char *name)
 
 void js_defproperty(js_State *J, int idx, const char *name, int atts)
 {
-	jsR_defproperty(J, js_toobject(J, idx), name, atts, stackidx(J, -1), NULL, NULL, 1);
+	jsR_defproperty(J, js_toobject(J, idx), name, atts, JS_READONLY|JS_DONTENUM|JS_DONTCONF, stackidx(J, -1), NULL, NULL, 1);
 	js_pop(J, 1);
 }
 
@@ -1029,7 +1101,7 @@ void js_delproperty(js_State *J, int idx, const char *name)
 
 void js_defaccessor(js_State *J, int idx, const char *name, int atts)
 {
-	jsR_defproperty(J, js_toobject(J, idx), name, atts, NULL, jsR_tofunction(J, -2), jsR_tofunction(J, -1), 1);
+	jsR_defproperty(J, js_toobject(J, idx), name, atts, JS_DONTENUM|JS_DONTCONF, NULL, jsR_tofunction(J, -2), jsR_tofunction(J, -1), 1);
 	js_pop(J, 2);
 }
 
@@ -1088,7 +1160,7 @@ js_Environment *jsR_newenvironment(js_State *J, js_Object *vars, js_Environment 
 
 static void js_initvar(js_State *J, const char *name, int idx)
 {
-	jsR_defproperty(J, J->E->variables, name, JS_DONTENUM | JS_DONTCONF, stackidx(J, idx), NULL, NULL, 0);
+	jsR_defproperty(J, J->E->variables, name, JS_DONTENUM|JS_DONTCONF, JS_READONLY|JS_DONTENUM|JS_DONTCONF, stackidx(J, idx), NULL, NULL, 0);
 }
 
 static int js_hasvar(js_State *J, const char *name)
@@ -1747,14 +1819,14 @@ static void jsR_run(js_State *J, js_Function *F)
 		case OP_INITGETTER:
 			obj = js_toobject(J, -3);
 			str = js_tostring(J, -2);
-			jsR_defproperty(J, obj, str, 0, NULL, jsR_tofunction(J, -1), NULL, 0);
+			jsR_defproperty(J, obj, str, 0, JS_DONTENUM|JS_DONTCONF, NULL, jsR_tofunction(J, -1), NULL, 0);
 			js_pop(J, 2);
 			break;
 
 		case OP_INITSETTER:
 			obj = js_toobject(J, -3);
 			str = js_tostring(J, -2);
-			jsR_defproperty(J, obj, str, 0, NULL, NULL, jsR_tofunction(J, -1), 0);
+			jsR_defproperty(J, obj, str, 0, JS_DONTENUM|JS_DONTCONF, NULL, NULL, jsR_tofunction(J, -1), 0);
 			js_pop(J, 2);
 			break;
 

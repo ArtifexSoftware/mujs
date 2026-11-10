@@ -694,14 +694,31 @@ int js_strictequal(js_State *J)
 {
 	js_Value *x = js_tovalue(J, -2);
 	js_Value *y = js_tovalue(J, -1);
-
 	if (JSV_ISSTRING(x) && JSV_ISSTRING(y))
 		return !strcmp(JSV_TOSTRING(x), JSV_TOSTRING(y));
-
 	if (x->t.type != y->t.type) return 0;
 	if (x->t.type == JS_TUNDEFINED) return 1;
 	if (x->t.type == JS_TNULL) return 1;
 	if (x->t.type == JS_TNUMBER) return x->u.number == y->u.number;
+	if (x->t.type == JS_TBOOLEAN) return x->u.boolean == y->u.boolean;
+	if (x->t.type == JS_TOBJECT) return x->u.object == y->u.object;
+	return 0;
+}
+
+int jsV_samevalue(js_State *J, js_Value *x, js_Value *y)
+{
+	if (JSV_ISSTRING(x) && JSV_ISSTRING(y))
+		return !strcmp(JSV_TOSTRING(x), JSV_TOSTRING(y));
+	if (x->t.type != y->t.type) return 0;
+	if (x->t.type == JS_TUNDEFINED) return 1;
+	if (x->t.type == JS_TNULL) return 1;
+	if (x->t.type == JS_TNUMBER) {
+		if (isnan(x->u.number) && isnan(y->u.number))
+			return 1;
+		if (x->u.number == 0 && y->u.number == 0)
+			return signbit(x->u.number) == signbit(y->u.number);
+		return x->u.number == y->u.number;
+	}
 	if (x->t.type == JS_TBOOLEAN) return x->u.boolean == y->u.boolean;
 	if (x->t.type == JS_TOBJECT) return x->u.object == y->u.object;
 	return 0;

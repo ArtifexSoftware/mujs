@@ -456,6 +456,9 @@ js_Object *js_toobject(js_State *J, int idx);
 void js_pushvalue(js_State *J, js_Value v);
 void js_pushobject(js_State *J, js_Object *v);
 void jsR_unflattenarray(js_State *J, js_Object *obj);
+int jsV_samevalue(js_State *J, js_Value *x, js_Value *y);
+js_Object *jsR_tofunction(js_State *J, int idx);
+void jsR_defproperty(js_State *J, js_Object *obj, const char *name, int atts, int mask, js_Value *value, js_Object *getter, js_Object *setter, int throw);
 
 /* jsvalue.c */
 int jsV_toboolean(js_State *J, js_Value *v);
@@ -481,6 +484,7 @@ js_Property *jsV_getownproperty(js_State *J, js_Object *obj, const char *name);
 js_Property *jsV_getpropertyx(js_State *J, js_Object *obj, const char *name, int *own);
 js_Property *jsV_getproperty(js_State *J, js_Object *obj, const char *name);
 js_Property *jsV_setproperty(js_State *J, js_Object *obj, const char *name);
+js_Property *jsV_defproperty(js_State *J, js_Object *obj, const char *name);
 js_Property *jsV_nextproperty(js_State *J, js_Object *obj, const char *name);
 void jsV_delproperty(js_State *J, js_Object *obj, const char *name);
 
