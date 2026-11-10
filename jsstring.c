@@ -151,8 +151,11 @@ static void Sp_concat(js_State *J)
 	char * volatile out = NULL;
 	const char *s;
 
-	if (top == 1)
+	if (top == 1) {
+		js_copy(J, 0);
+		js_tostring(J, -1);
 		return;
+	}
 
 	s = checkstring(J, 0);
 	n = 1 + strlen(s);
