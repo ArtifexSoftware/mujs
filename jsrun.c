@@ -531,7 +531,7 @@ int js_isarrayindex(js_State *J, const char *p, int *idx)
 	return *idx = n, 1;
 }
 
-static void js_pushrune(js_State *J, Rune rune)
+void js_pushrune(js_State *J, int rune)
 {
 	char buf[UTFmax + 1];
 	if (rune >= 0) {

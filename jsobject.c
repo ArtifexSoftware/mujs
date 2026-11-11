@@ -117,16 +117,70 @@ static void O_getPrototypeOf(js_State *J)
 		js_pushnull(J);
 }
 
+static void O_getOwnPropertyDescriptor_push(js_State *J, int atts)
+{
+	js_newobject(J);
+	js_rot2(J);
+	js_defproperty(J, -2, "value", 0);
+	js_pushboolean(J, !(atts & JS_READONLY));
+	js_defproperty(J, -2, "writable", 0);
+	js_pushboolean(J, !(atts & JS_DONTENUM));
+	js_defproperty(J, -2, "enumerable", 0);
+	js_pushboolean(J, !(atts & JS_DONTCONF));
+	js_defproperty(J, -2, "configurable", 0);
+}
+
 static void O_getOwnPropertyDescriptor(js_State *J)
 {
 	js_Object *obj;
 	js_Property *ref;
+	const char *name;
+	int k;
+
 	if (!js_isobject(J, 1))
 		js_typeerror(J, "not an object");
 	obj = js_toobject(J, 1);
-	ref = jsV_getproperty(J, obj, js_tostring(J, 2));
+	name = js_tostring(J, 2);
+
+	ref = jsV_getproperty(J, obj, name);
 	if (!ref) {
-		/* TODO: builtin properties (string and array index and length, regexp flags, etc) */
+		if (obj->type == JS_CARRAY) {
+			if (!strcmp(name, "length")) {
+				js_pushnumber(J, obj->u.a.length);
+				O_getOwnPropertyDescriptor_push(J, JS_DONTENUM | JS_DONTCONF);
+				return;
+			}
+			if (obj->u.a.simple) {
+				if (js_isarrayindex(J, name, &k)) {
+					if (k >= 0 && k < obj->u.a.flat_length) {
+						js_pushvalue(J, obj->u.a.array[k]);
+						O_getOwnPropertyDescriptor_push(J, 0);
+						return;
+					}
+				}
+			}
+		}
+		else if (obj->type == JS_CSTRING) {
+			if (!strcmp(name, "length")) {
+				js_pushnumber(J, obj->u.s.length);
+				O_getOwnPropertyDescriptor_push(J, JS_READONLY | JS_DONTENUM | JS_DONTCONF);
+				return;
+			}
+			if (js_isarrayindex(J, name, &k)) {
+				if (k >= 0 && k < obj->u.s.length) {
+					js_pushrune(J, js_runeat(J, obj->u.s.string, k));
+					O_getOwnPropertyDescriptor_push(J, JS_READONLY | JS_DONTCONF);
+					return;
+				}
+			}
+		}
+		else if (obj->type == JS_CREGEXP) {
+			if (!strcmp(name, "lastIndex")) {
+				js_pushnumber(J, obj->u.r.last);
+				O_getOwnPropertyDescriptor_push(J, JS_DONTENUM | JS_DONTCONF);
+				return;
+			}
+		}
 		js_pushundefined(J);
 	} else {
 		js_newobject(J);
