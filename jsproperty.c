@@ -273,10 +273,11 @@ static js_Iterator *itwalk(js_State *J, js_Iterator *iter, js_Property *prop, js
 static js_Iterator *itflatten(js_State *J, js_Object *obj)
 {
 	js_Iterator *iter = NULL;
-	if (obj->prototype)
-		iter = itflatten(J, obj->prototype);
-	if (obj->properties != &sentinel)
-		iter = itwalk(J, iter, obj->properties, obj->prototype);
+	while (obj) {
+		if (obj->properties != &sentinel)
+			iter = itwalk(J, iter, obj->properties, obj->prototype);
+		obj = obj->prototype;
+	}
 	return iter;
 }
 
