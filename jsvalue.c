@@ -364,21 +364,23 @@ const char *jsV_tostring(js_State *J, js_Value *v)
 
 /* Objects */
 
-static js_Object *jsV_newboolean(js_State *J, int v)
+static js_Object *jsV_newboolean(js_State *J, int v, int extensible)
 {
 	js_Object *obj = jsV_newobject(J, JS_CBOOLEAN, J->Boolean_prototype);
 	obj->u.boolean = v;
+	obj->extensible = extensible;
 	return obj;
 }
 
-static js_Object *jsV_newnumber(js_State *J, double v)
+static js_Object *jsV_newnumber(js_State *J, double v, int extensible)
 {
 	js_Object *obj = jsV_newobject(J, JS_CNUMBER, J->Number_prototype);
 	obj->u.number = v;
+	obj->extensible = extensible;
 	return obj;
 }
 
-static js_Object *jsV_newstring(js_State *J, const char *v)
+static js_Object *jsV_newstring(js_State *J, const char *v, int extensible)
 {
 	js_Object *obj = jsV_newobject(J, JS_CSTRING, J->String_prototype);
 	size_t n = strlen(v);
@@ -389,6 +391,7 @@ static js_Object *jsV_newstring(js_State *J, const char *v)
 		obj->u.s.string = js_strdup(J, v);
 	}
 	obj->u.s.length = js_utflen(v);
+	obj->extensible = extensible;
 	return obj;
 }
 
@@ -401,11 +404,11 @@ js_Object *jsV_toobject(js_State *J, js_Value *v)
 	case JS_TUNDEFINED: js_typeerror(J, "cannot convert undefined to object");
 	case JS_TNULL: js_typeerror(J, "cannot convert null to object");
 	case JS_TOBJECT: return v->u.object;
-	case JS_TSHRSTR: o = jsV_newstring(J, v->u.shrstr); break;
-	case JS_TLITSTR: o = jsV_newstring(J, v->u.litstr); break;
-	case JS_TMEMSTR: o = jsV_newstring(J, v->u.memstr->p); break;
-	case JS_TBOOLEAN: o = jsV_newboolean(J, v->u.boolean); break;
-	case JS_TNUMBER: o = jsV_newnumber(J, v->u.number); break;
+	case JS_TSHRSTR: o = jsV_newstring(J, v->u.shrstr, 0); break;
+	case JS_TLITSTR: o = jsV_newstring(J, v->u.litstr, 0); break;
+	case JS_TMEMSTR: o = jsV_newstring(J, v->u.memstr->p, 0); break;
+	case JS_TBOOLEAN: o = jsV_newboolean(J, v->u.boolean, 0); break;
+	case JS_TNUMBER: o = jsV_newnumber(J, v->u.number, 0); break;
 	}
 	v->t.type = JS_TOBJECT;
 	v->u.object = o;
@@ -440,17 +443,17 @@ void js_newarray(js_State *J)
 
 void js_newboolean(js_State *J, int v)
 {
-	js_pushobject(J, jsV_newboolean(J, v));
+	js_pushobject(J, jsV_newboolean(J, v, 1));
 }
 
 void js_newnumber(js_State *J, double v)
 {
-	js_pushobject(J, jsV_newnumber(J, v));
+	js_pushobject(J, jsV_newnumber(J, v, 1));
 }
 
 void js_newstring(js_State *J, const char *v)
 {
-	js_pushobject(J, jsV_newstring(J, v));
+	js_pushobject(J, jsV_newstring(J, v, 1));
 }
 
 void js_newfunction(js_State *J, js_Function *fun, js_Environment *scope)
