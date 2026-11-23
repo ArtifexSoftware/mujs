@@ -136,7 +136,7 @@ double js_strtol(const char *s, char **ep, int radix);
 
 /* Private stack functions */
 
-void js_newarguments(js_State *J);
+void js_newarguments(js_State *J, js_Function *function, js_Environment *scope, int length);
 void js_newfunction(js_State *J, js_Function *function, js_Environment *scope);
 void js_newscript(js_State *J, js_Function *function, js_Environment *scope);
 void js_loadeval(js_State *J, const char *filename, const char *source);
@@ -377,6 +377,11 @@ struct js_Object
 	union {
 		int boolean;
 		double number;
+		struct {
+			js_Function *function;
+			js_Environment *scope;
+			int length;
+		} aa;
 		struct {
 			int length;
 			char *string;

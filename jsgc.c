@@ -121,6 +121,12 @@ static void jsG_scanobject(js_State *J, int mark, js_Object *obj)
 		if (obj->u.f.function && obj->u.f.function->gcmark != mark)
 			jsG_markfunction(J, mark, obj->u.f.function);
 	}
+	if (obj->type == JS_CARGUMENTS) {
+		if (obj->u.aa.scope && obj->u.aa.scope->gcmark != mark)
+			jsG_markenvironment(J, mark, obj->u.aa.scope);
+		if (obj->u.aa.function && obj->u.aa.function->gcmark != mark)
+			jsG_markfunction(J, mark, obj->u.aa.function);
+	}
 }
 
 static void jsG_markstack(js_State *J, int mark)

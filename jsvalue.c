@@ -429,9 +429,13 @@ void js_newobject(js_State *J)
 	js_pushobject(J, jsV_newobject(J, JS_COBJECT, J->Object_prototype));
 }
 
-void js_newarguments(js_State *J)
+void js_newarguments(js_State *J, js_Function *function, js_Environment *scope, int length)
 {
-	js_pushobject(J, jsV_newobject(J, JS_CARGUMENTS, J->Object_prototype));
+	js_Object *obj = jsV_newobject(J, JS_CARGUMENTS, J->Object_prototype);
+	obj->u.aa.function = function;
+	obj->u.aa.scope = scope;
+	obj->u.aa.length = length;
+	js_pushobject(J, obj);
 }
 
 void js_newarray(js_State *J)

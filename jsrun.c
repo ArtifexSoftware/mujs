@@ -573,6 +573,19 @@ static int jsR_hasproperty(js_State *J, js_Object *obj, const char *name)
 	js_Property *ref;
 	int k;
 
+	if (obj->type == JS_CARGUMENTS && !obj->u.aa.function->strict) {
+		if (js_isarrayindex(J, name, &k)) {
+			if (k >= 0 && k < obj->u.aa.length) {
+				ref = jsV_getproperty(J, obj->u.aa.scope->variables, obj->u.aa.function->vartab[k]);
+				if (ref) {
+					js_pushvalue(J, ref->value);
+					return 1;
+				}
+				return 0;
+			}
+		}
+	}
+
 	if (obj->type == JS_CARRAY) {
 		if (!strcmp(name, "length")) {
 			js_pushnumber(J, obj->u.a.length);
@@ -702,6 +715,19 @@ static void jsR_setproperty(js_State *J, js_Object *obj, const char *name, int t
 	js_Property *ref;
 	int k;
 	int own;
+
+	if (obj->type == JS_CARGUMENTS && !obj->u.aa.function->strict) {
+		if (js_isarrayindex(J, name, &k)) {
+			if (k >= 0 && k < obj->u.aa.length) {
+				ref = jsV_getproperty(J, obj->u.aa.scope->variables, obj->u.aa.function->vartab[k]);
+				if (ref) {
+					ref->value = *value;
+					return;
+				}
+				return;
+			}
+		}
+	}
 
 	if (obj->type == JS_CARRAY) {
 		if (!strcmp(name, "length")) {
@@ -1277,17 +1303,30 @@ static void jsR_callfunction(js_State *J, int n, js_Function *F, js_Environment 
 	jsR_savescope(J, scope);
 
 	if (F->arguments) {
-		js_newarguments(J);
-		if (!J->strict) {
+		js_newarguments(J, F, scope, n < F->numparams ? n : F->numparams);
+
+		if (!F->strict) {
 			js_currentfunction(J);
 			js_defproperty(J, -2, "callee", JS_DONTENUM);
 		}
+
 		js_pushnumber(J, n);
 		js_defproperty(J, -2, "length", JS_DONTENUM);
-		for (i = 0; i < n; ++i) {
-			js_copy(J, i + 1);
-			js_setindex(J, -2, i);
+
+		if (F->strict) {
+			/* in strict mode all the arguments entries are copies of input arguments */
+			for (i = 0; i < n; ++i) {
+				js_copy(J, i + 1);
+				js_setindex(J, -2, i);
+			}
+		} else {
+			/* in non-strict mode we need to copy input arguments that are not aliased to parameters */
+			for (i = F->numparams; i < n; ++i) {
+				js_copy(J, i + 1);
+				js_setindex(J, -2, i);
+			}
 		}
+
 		js_initvar(J, "arguments", -1);
 		js_pop(J, 1);
 	}
